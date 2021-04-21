@@ -615,7 +615,10 @@ func resourceLibvirtDomainCreate(d *schema.ResourceData, meta interface{}) error
 		}
 	}
 
-	destroyDomainByUserRequest(d, domain)
+	if err := createOrDestroyDomainByUserRequest(d, domain); err != nil {
+		return fmt.Errorf("error setting domain state: '%s'", err)
+	}
+
 	return nil
 }
 
@@ -715,6 +718,10 @@ func resourceLibvirtDomainUpdate(d *schema.ResourceData, meta interface{}) error
 	}
 
 	d.Partial(false)
+
+	if err := createOrDestroyDomainByUserRequest(d, domain); err != nil {
+		return fmt.Errorf("error setting domain state: '%s'", err)
+	}
 
 	return nil
 }

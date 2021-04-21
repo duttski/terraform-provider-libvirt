@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	libvirt "github.com/libvirt/libvirt-go"
-	"github.com/libvirt/libvirt-go-xml"
+	libvirtxml "github.com/libvirt/libvirt-go-xml"
 )
 
 const domWaitLeaseStillWaiting = "waiting-addresses"
@@ -825,28 +825,46 @@ func setNetworkInterfaces(d *schema.ResourceData, domainDef *libvirtxml.Domain,
 	return nil
 }
 
-func destroyDomainByUserRequest(d *schema.ResourceData, domain *libvirt.Domain) error {
-	if d.Get("running").(bool) {
-		return nil
-	}
-
-	domainID, err := domain.GetUUIDString()
-
-	if err != nil {
-		return fmt.Errorf("Error retrieving libvirt domain id: %s", err)
-	}
-
-	log.Printf("Destroying libvirt domain %s", domainID)
+func destroyDomain(domain *libvirt.Domain) error {
 	state, _, err := domain.GetState()
 	if err != nil {
 		return fmt.Errorf("Couldn't get info about domain: %s", err)
 	}
 
+	domainID, err := domain.GetUUIDString()
+	if err != nil {
+		return fmt.Errorf("Error retrieving libvirt domain id: %s", err)
+	}
+
 	if state == libvirt.DOMAIN_RUNNING || state == libvirt.DOMAIN_PAUSED {
+		log.Printf("Destroying libvirt domain %s", domainID)
 		if err := domain.Destroy(); err != nil {
 			return fmt.Errorf("Couldn't destroy libvirt domain: %s", err)
 		}
 	}
 
 	return nil
+}
+
+func createDomain(domain *libvirt.Domain) error {
+	state, _, err := domain.GetState()
+	if err != nil {
+		return fmt.Errorf("Couldn't get info about domain: %s", err)
+	}
+
+	if state != libvirt.DOMAIN_RUNNING && state != libvirt.DOMAIN_PAUSED {
+		if err := domain.Create(); err != nil {
+			return fmt.Errorf("Couldn't create libvirt domain: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func createOrDestroyDomainByUserRequest(d *schema.ResourceData, domain *libvirt.Domain) error {
+	if d.Get("running").(bool) {
+		return createDomain(domain)
+	} else {
+		return destroyDomain(domain)
+	}
 }
