@@ -864,7 +864,7 @@ func createDomain(domain *libvirt.Domain) error {
 func createOrDestroyDomainByUserRequest(d *schema.ResourceData, domain *libvirt.Domain) error {
 	if d.Get("running").(bool) {
 		return createDomain(domain)
-	} else {
-		return destroyDomain(domain)
 	}
+
+	return destroyDomain(domain)
 }
